@@ -13,7 +13,7 @@ html, body {
   background: #ffe0e8;
 }
 
-/* Grid 5x2 */
+/* Fullscreen grid 5x2 */
 #backgroundGrid {
   position: fixed; top: 0; left: 0;
   width: 100%; height: 100%;
@@ -84,7 +84,7 @@ button {
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
 <script>
-// YOUR MEDIA
+// ** Your uploaded images only **
 const images = [
   "Photo1.jpg","Photo2.jpg","Photo3.jpg","Photo4.jpg","Photo5.jpg",
   "Photo6.jpg","Photo7.jpg","Photo8.jpg","Photo9.jpg","Photo10.jpg",
@@ -100,7 +100,7 @@ const backgroundGrid = document.getElementById("backgroundGrid");
 
 let confettiInterval;
 
-// Move “No” away
+// Make "No" button run away
 let noActivated = false;
 function moveNoBtn() {
   if (!noActivated) {
@@ -109,8 +109,8 @@ function moveNoBtn() {
   }
   const rect = questionCard.getBoundingClientRect();
   const btnRect = noBtn.getBoundingClientRect();
-  noBtn.style.left = Math.random() * (rect.width-btnRect.width-10) + "px";
-  noBtn.style.top  = Math.random() * (rect.height-btnRect.height-10) + "px";
+  noBtn.style.left = Math.random() * (rect.width - btnRect.width - 10) + "px";
+  noBtn.style.top  = Math.random() * (rect.height - btnRect.height - 10) + "px";
 }
 noBtn.addEventListener("mouseenter", moveNoBtn);
 noBtn.addEventListener("click", moveNoBtn);
@@ -120,110 +120,62 @@ yesBtn.addEventListener("click", () => {
   questionCard.style.display = "none";
   celebrateCard.style.display = "block";
 
+  // Play background music
   bgMusic.volume = 0.5;
   bgMusic.play();
 
+  // Confetti
   confettiInterval = setInterval(() => {
     confetti({
-      particleCount: 120,
+      particleCount: 100,
       spread: 100,
       startVelocity: 35,
-      origin: { x: Math.random(), y: Math.random()*0.4 }
+      origin: { x: Math.random(), y: Math.random() * 0.4 }
     });
   }, 700);
 
   startBackgroundGrid();
 });
 
-// Keep track of *currently playing videos* so we don’t overload
-let playingVideos = [];
-
-// Start grid
+// Fill grid with initial images
 function startBackgroundGrid() {
   backgroundGrid.style.display = "grid";
   backgroundGrid.innerHTML = "";
+
   for (let i = 0; i < 10; i++) {
     const cell = document.createElement("div");
     backgroundGrid.appendChild(cell);
-    preloadAndShow(cell);      // show immediately
-    scheduleCellChange(cell);  // schedule future
+    preloadAndShow(cell);     // show immediately
+    scheduleCellChange(cell); // schedule transition
   }
 }
 
-// Preload media and show it
+// Preload and show an image with fade
 function preloadAndShow(cell) {
-  preloadNextMedia().then(next => {
-    // Fade out old smoothly
+  const img = new Image();
+  const src = images[Math.floor(Math.random() * images.length)];
+  img.src = src;
+  img.className = "grid-media";
+  img.onload = () => {
+    // fade out old
     const old = cell.querySelector(".grid-media");
     if (old) {
       old.style.opacity = "0";
       setTimeout(() => old.remove(), 800);
     }
-
-    // Manage video play count
-    if (next.tagName === "VIDEO") {
-      // if many videos already playing, downgrade to image
-      if (playingVideos.length >= 3) {
-        const img = new Image();
-        img.src = images[Math.floor(Math.random()*images.length)];
-        next.remove(); // discard bad video
-        showElement(cell, img);
-        return;
-      }
-      // track video
-      playingVideos.push(next);
-      // remove from array on end
-      next.onended = () => {
-        playingVideos = playingVideos.filter(v => v !== next);
-      };
-    }
-
-    showElement(cell, next);
-  });
+    cell.appendChild(img);
+    requestAnimationFrame(() => img.style.opacity = "1");
+  };
 }
 
-// Helper to show element with fade
-function showElement(cell, media) {
-  media.className = "grid-media";
-  media.style.opacity = "0";
-  cell.appendChild(media);
-  requestAnimationFrame(() => media.style.opacity = "1");
-}
-
-// Preload next media
-function preloadNextMedia() {
-  return new Promise(resolve => {
-    const useVideo = Math.random() < 0.3 && videos.length > 0;
-    if (useVideo) {
-      const v = document.createElement("video");
-      const src = videos[Math.floor(Math.random()*videos.length)];
-      v.src = src;
-      v.muted = true;
-      v.playsInline = true;
-      v.autoplay = true;
-      // preload metadata then resolve
-      v.addEventListener("loadedmetadata", () => resolve(v));
-      return;
-    }
-    const img = new Image();
-    const src = images[Math.floor(Math.random()*images.length)];
-    img.src = src;
-    img.onload = () => resolve(img);
-  });
-}
-
-// Change at random intervals
+// Schedule change per cell
 function scheduleCellChange(cell) {
-  const delay = 2000 + Math.random() * 2500;
+  const delay = 2000 + Math.random() * 2500; // 2–4.5 seconds
   setTimeout(() => {
     preloadAndShow(cell);
     scheduleCellChange(cell);
   }, delay);
 }
-
 </script>
 </body>
 </html>
-
-
-
