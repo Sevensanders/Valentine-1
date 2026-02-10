@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Valentine with Beat, Zoom & Click Effects</title>
+<meta charset="UTF-8" />
+<title>Be My Valentine 💘</title>
 <style>
 html, body {
   margin: 0;
@@ -13,54 +13,42 @@ html, body {
   background: #ffe0e8;
 }
 
-/* Grid */
+/* Grid 5x2 */
 #backgroundGrid {
-  position: fixed;
-  top: 0; left: 0;
+  position: fixed; top: 0; left: 0;
   width: 100%; height: 100%;
-  display: none;
-  z-index: 0;
+  display: none; z-index: 0;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   grid-template-rows: repeat(2, 1fr);
-  gap: 3px;
+  gap: 2px;
 }
+
 #backgroundGrid > div {
   position: relative;
   border: 1px solid #eee;
   overflow: hidden;
-  cursor: pointer;
 }
 
-/* Media */
 .grid-media {
   position: absolute;
-  width: 110%; height: 110%; /* for parallax / zoom */
-  top: -5%; left: -5%;
+  width: 100%; height: 100%;
+  top: 0; left: 0;
   object-fit: cover;
-  opacity: 0;
-  filter: blur(0px);
-  transition: opacity 1s ease, filter 0.8s ease, transform 1.2s ease;
+  opacity: 1;
+  transition: opacity 1s ease;
 }
 
-/* Click/Tap Pop Effect */
-@keyframes popEffect {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.12); }
-  100% { transform: scale(1); }
-}
-
-/* Overlay Cards */
 .overlay {
-  position: absolute;
-  left: 50%; top: 50%;
+  position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%);
   background: rgba(255,255,255,0.98);
   padding: 40px;
   border-radius: 20px;
   text-align: center;
   z-index: 10;
-  min-width: 300px;
+  min-width: 320px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
 }
 
 button {
@@ -68,6 +56,7 @@ button {
   border: none; border-radius: 30px;
   cursor: pointer; margin: 5px;
 }
+
 #yes { background: #ff4d6d; color: white; }
 #no  { background: #ccc; color: #333; }
 </style>
@@ -92,10 +81,17 @@ button {
 </audio>
 
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
 <script>
-// Your media lists
-const images = ["Photo1.jpg","Photo2.jpg","Photo3.jpg","Photo4.jpg","Photo5.jpg","Photo6.jpg","Photo7.jpg","Photo8.jpg","Photo9.jpg","Photo10.jpg","Photo11.jpg","Photo12.jpg","Photo13.jpg","Photo14.jpg"];
-const videos = ["Video1.mp4","Video2.mp4","Video3.mp4","Video4.mp4","Video5.mp4"];
+// YOUR MEDIA
+const images = [
+  "Photo1.jpg","Photo2.jpg","Photo3.jpg","Photo4.jpg","Photo5.jpg",
+  "Photo6.jpg","Photo7.jpg","Photo8.jpg","Photo9.jpg","Photo10.jpg",
+  "Photo11.jpg","Photo12.jpg","Photo13.jpg","Photo14.jpg"
+];
+const videos = [
+  "Video1.mp4","Video2.mp4","Video3.mp4","Video4.mp4","Video5.mp4"
+];
 
 const noBtn = document.getElementById("no");
 const yesBtn = document.getElementById("yes");
@@ -106,7 +102,7 @@ const backgroundGrid = document.getElementById("backgroundGrid");
 
 let confettiInterval;
 
-// Prevent “No”
+// Move “No” away
 let noActivated = false;
 function moveNoBtn() {
   if (!noActivated) {
@@ -115,8 +111,8 @@ function moveNoBtn() {
   }
   const rect = questionCard.getBoundingClientRect();
   const btnRect = noBtn.getBoundingClientRect();
-  noBtn.style.left = Math.random()*(rect.width-btnRect.width-20)+"px";
-  noBtn.style.top  = Math.random()*(rect.height-btnRect.height-20)+"px";
+  noBtn.style.left = Math.random() * (rect.width-btnRect.width-10) + "px";
+  noBtn.style.top  = Math.random() * (rect.height-btnRect.height-10) + "px";
 }
 noBtn.addEventListener("mouseenter", moveNoBtn);
 noBtn.addEventListener("click", moveNoBtn);
@@ -130,91 +126,101 @@ yesBtn.addEventListener("click", () => {
   bgMusic.play();
 
   confettiInterval = setInterval(() => {
-    confetti({ particleCount: 100, spread: 120, startVelocity: 35,
+    confetti({
+      particleCount: 120,
+      spread: 100,
+      startVelocity: 35,
       origin: { x: Math.random(), y: Math.random()*0.4 }
     });
-  }, 900);
+  }, 700);
 
   startBackgroundGrid();
 });
 
-// Beat‑sync pulse
-let lastBeatTime = performance.now();
-const BPM = 90; // change this to sync to your music
-const beatInterval = 60000 / BPM;
-
-function beatLoop(time) {
-  const diff = time - lastBeatTime;
-  if (diff >= beatInterval) {
-    lastBeatTime = time;
-    document.querySelectorAll('.grid-media').forEach(el => {
-      el.style.transform = "scale(1.03)";
-      setTimeout(() => el.style.transform = "scale(1)", beatInterval / 2);
-    });
-  }
-  requestAnimationFrame(beatLoop);
-}
+// Keep track of *currently playing videos* so we don’t overload
+let playingVideos = [];
 
 // Start grid
 function startBackgroundGrid() {
   backgroundGrid.style.display = "grid";
   backgroundGrid.innerHTML = "";
-  for (let i=0; i<10; i++){
+  for (let i = 0; i < 10; i++) {
     const cell = document.createElement("div");
     backgroundGrid.appendChild(cell);
-    scheduleCellAnimated(cell);
-    cell.addEventListener("click", () => {
-      cell.firstChild.style.animation = "popEffect 0.6s ease";
-    });
+    preloadAndShow(cell);      // show immediately
+    scheduleCellChange(cell);  // schedule future
   }
-  requestAnimationFrame(beatLoop);
 }
 
-function scheduleCellAnimated(cell) {
-  setCellMedia(cell);
-  const delay = 1500 + Math.random()*2500;
-  setTimeout(() => scheduleCellAnimated(cell), delay);
-}
-
-function setCellMedia(cell) {
-  const newMedia = document.createElement(
-    Math.random() < 0.3 && videos.length>0 ? "video" : "img"
-  );
-
-  newMedia.className = "grid-media";
-
-  if (newMedia.tagName === "VIDEO") {
-    newMedia.src = videos[Math.floor(Math.random()*videos.length)];
-    newMedia.autoplay = true;
-    newMedia.muted = true;
-    newMedia.playsInline = true;
-    newMedia.addEventListener("loadedmetadata", () => {
-      requestAnimationFrame(() => newMedia.style.opacity = "1");
-      setTimeout(() => fadeOutCell(cell, newMedia), (newMedia.duration/2)*1000);
-    });
-  } else {
-    newMedia.src = images[Math.floor(Math.random()*images.length)];
-    newMedia.onload = () => requestAnimationFrame(() => newMedia.style.opacity = "1");
-    setTimeout(() => fadeOutCell(cell, newMedia), 2500); // images stay longer
-  }
-
-  // remove old gracefully
-  const old = cell.querySelector('.grid-media');
-  if (old) {
-    old.style.opacity = "0";
-    setTimeout(() => old.remove(), 800);
-  }
-  cell.appendChild(newMedia);
-}
-
-// fade out then remove
-function fadeOutCell(cell, current) {
-  current.style.opacity = "0";
-  setTimeout(() => {
-    if (current.parentElement) {
-      scheduleCellAnimated(cell);
+// Preload media and show it
+function preloadAndShow(cell) {
+  preloadNextMedia().then(next => {
+    // Fade out old smoothly
+    const old = cell.querySelector(".grid-media");
+    if (old) {
+      old.style.opacity = "0";
+      setTimeout(() => old.remove(), 800);
     }
-  }, 800);
+
+    // Manage video play count
+    if (next.tagName === "VIDEO") {
+      // if many videos already playing, downgrade to image
+      if (playingVideos.length >= 3) {
+        const img = new Image();
+        img.src = images[Math.floor(Math.random()*images.length)];
+        next.remove(); // discard bad video
+        showElement(cell, img);
+        return;
+      }
+      // track video
+      playingVideos.push(next);
+      // remove from array on end
+      next.onended = () => {
+        playingVideos = playingVideos.filter(v => v !== next);
+      };
+    }
+
+    showElement(cell, next);
+  });
+}
+
+// Helper to show element with fade
+function showElement(cell, media) {
+  media.className = "grid-media";
+  media.style.opacity = "0";
+  cell.appendChild(media);
+  requestAnimationFrame(() => media.style.opacity = "1");
+}
+
+// Preload next media
+function preloadNextMedia() {
+  return new Promise(resolve => {
+    const useVideo = Math.random() < 0.3 && videos.length > 0;
+    if (useVideo) {
+      const v = document.createElement("video");
+      const src = videos[Math.floor(Math.random()*videos.length)];
+      v.src = src;
+      v.muted = true;
+      v.playsInline = true;
+      v.autoplay = true;
+      // preload metadata then resolve
+      v.addEventListener("loadedmetadata", () => resolve(v));
+      return;
+    }
+    const img = new Image();
+    const src = images[Math.floor(Math.random()*images.length)];
+    img.src = src;
+    img.onload = () => resolve(img);
+  });
+}
+
+// Change at random intervals
+function scheduleCellChange(cell) {
+  const delay = 2000 + Math.random() * 2500;
+  setTimeout(() => {
+    preloadAndShow(cell);
+    scheduleCellChange(cell);
+  }, delay);
 }
 
 </script>
